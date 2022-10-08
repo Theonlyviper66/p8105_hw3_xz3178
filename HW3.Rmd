@@ -10,6 +10,143 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-
+library(tidyverse)
+library(ggridges)
+library(p8105.datasets)
+data("instacart")
 ```
+
+The instacart data set is stored as a dataframe that contains `r nrow(instacart)` rows and `r ncol(instacart)` columns, where each row is a product from an order. Some examples of the variables include add_to_cart_order which is the order in which each product is added to the cart, order sequence number for the user, order_dow which is the day of the week on which the order was placed, the name of the product, aisle identified, etc. The head of the dataset is shown below: 
+
+```{r}
+head(instacart,n=4L)
+```
+
+```{r}
+instacart %>% 
+  group_by(aisle_id,aisle) %>%
+  summarize(
+    n_aisle = n(),
+  ) %>% arrange(desc(n_aisle))
+  
+```
+
+There are a total of 134 aisles. Most items are ordered from the fresh vegetables (#83) aisle. 
+
+```{r}
+instacart %>% 
+  group_by(aisle_id,aisle) %>%
+  summarize(
+    n_aisle = n(),
+  ) %>% 
+  filter(n_aisle>10000) %>%
+  arrange(desc(n_aisle)) %>%
+  mutate(
+    aisle = as.factor(aisle)
+  ) %>%
+  ggplot(aes(x=n_aisle))+geom_bar()
+```
+
+```{r}
+instacart %>%
+  filter(aisle ==c("baking ingredients","dog food care" , "packaged vegetables fruits")) %>%
+  group_by(aisle,product_name) %>%
+  summarise(
+    n_product = n()
+  ) %>%
+  arrange(desc(n_product)) %>%
+  mutate(rank=rank(desc(n_product))) %>%
+  filter(rank==c(1,2,3)) %>%
+pivot_wider(
+    names_from = aisle,
+    values_from = product_name
+  ) %>%
+  knitr::kable()
+  
+```
+
+
+
+```{r}
+instacart %>%
+  select(c("order_dow","order_hour_of_day","product_name")) %>%
+  filter(product_name==c("Pink Lady Apples","Coffee Ice Cream")) %>%
+  group_by(order_dow) 
+```
+
+## Question 2
+
+```{r}
+accel = read_csv("./data/accel_data.csv") %>%
+  janitor::clean_names() %>% 
+  mutate(
+    weekday_weekend = ifelse(day %in% c("Monday","Tuesday","Wednesday","Thursday","Friday"),"weekday","weekend"),
+    weekday_weekend = as.factor(weekday_weekend)
+  )
+  
+```
+
+A weekday_weekend variable was added to the original data set to indicate if that day is a weekday or a weekend day, and the resulting data set contains `r nrow(accel)` rows and `r ncol(accel)` columns.  It includes variable such as the week number, which day of the week it is, and the activity counts for each minute of a 24-hour day starting at midnight. 
+
+```{r}
+accel %>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "activity",
+    values_to = "activity_count"
+  ) %>% 
+  group_by(day_id) %>%
+  summarize(day_sum = sum(activity_count)) %>%
+  knitr::kable()
+```
+
+```{r}
+accel %>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "activity",
+    values_to = "activity_count"
+  ) %>% 
+  group_by(day_id,weekday_weekend) %>%
+  summarize(day_sum = sum(activity_count)) %>%
+  ggplot(aes(x=weekday_weekend,y=day_sum))+geom_boxplot()+labs(title = "Figure 2.1: Total activities by weekday or weekend")
+```
+
+
+
+```{r}
+accel %>%
+  mutate(
+    day=factor(day,levels = c("Monday", "Tuesday", "Wednesday","Thursday","Friday","Saturday","Sunday"))
+    )%>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "activity",
+    values_to = "activity_count"
+  ) %>% 
+  group_by(day_id,day) %>%
+  summarize(day_sum = sum(activity_count)) %>%
+  ggplot(aes(x=day,y=day_sum))+geom_boxplot()+labs(title="Figure 2.2: Total activities by day of a week")
+```
+
+As shown in figure 2.1, the total activities of weekday is quite similar to that of weekend. In figure 2.2, we could see that the total activities for Friday is highest. The total activities for Sunday and Wednesday are higher than the rest, and the activities of Monday, Tuesday, Thursday, and Saturday are close to each other. There is also a much greater variation in the total activities on Saturday and Sunday compared to other days. In contrast, the total activities on Wednesday has much less variation. 
+
+```{r}
+accel %>%
+  mutate(
+    day=factor(day,levels = c("Monday", "Tuesday", "Wednesday","Thursday","Friday","Saturday","Sunday"))
+    )%>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "activity",
+    values_to = "activity_count"
+  ) %>% 
+  group_by(day_id,day) %>%
+  summarize(day_sum = sum(activity_count)) %>%
+  ggplot(aes(x=day_id,y=day_sum))+geom_line(aes(color=day))+labs(title="Figure 2.3: Total activities by days")
+```
+
+For most days of a week except for Sunday, the total activities were increasing before day 10. For Monday, Saturday, and Sunday, the total activities started to decrease after it reached its peak values. For Tuesday, Thursday, and Friday, the total activities start to increase agin after reaching the minimum value. The change of total activies for each Wednesday over these weeks is more gradual. 
+
+## Question 3
 
