@@ -1,0 +1,15 @@
+---
+title: "HW3"
+author: "Xuesen Zhao"
+date: "2022-10-08"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+```
+
