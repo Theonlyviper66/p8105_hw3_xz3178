@@ -146,7 +146,65 @@ accel %>%
   ggplot(aes(x=day_id,y=day_sum))+geom_line(aes(color=day))+labs(title="Figure 2.3: Total activities by days")
 ```
 
-For most days of a week except for Sunday, the total activities were increasing before day 10. For Monday, Saturday, and Sunday, the total activities started to decrease after it reached its peak values. For Tuesday, Thursday, and Friday, the total activities start to increase agin after reaching the minimum value. The change of total activies for each Wednesday over these weeks is more gradual. 
+For most days of a week except for Sunday, the total activities were increasing before day 10. For Monday, Saturday, and Sunday, the total activities started to decrease after it reached its peak values. For Tuesday, Thursday, and Friday, the total activities started to increase again after reaching the minimum value. The change of total activities for each Wednesday over these weeks was more gradual. 
+
 
 ## Question 3
+
+```{r}
+library(p8105.datasets)
+data("ny_noaa")
+```
+
+The original data set ny_noaa contains `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns which is stored as a tibble/dataframe. The data set contains information on the date, ID for the New York state weather stations, and 5 core weather variables including precipitation (tenths of mm), snowfall (mm), snow depth (mm), maximum temperature and minimum temperature in tenths of degree C. `r scales::percent(mean(is.na(ny_noaa))) ` of the original data set has missing values, which constituted a relatively large proportion.
+
+```{r}
+ny_noaa %>%
+  janitor::clean_names() %>%
+  separate(date, into = c("year","month","day"),sep = "-") %>%
+  mutate(
+    prcp = prcp * 10,
+    tmax = as.numeric(tmax) * 10,
+    tmin = as.numeric(tmin) * 10
+  ) %>% 
+  group_by(snow) %>%
+  summarize(
+    n_snow = n()
+  ) %>% 
+  arrange(desc(n_snow))
+
+```
+
+The maximum and minimum temperature were divided by 10 to give a unit of degree Celsius. Precipitation values were also divided by 10 to give a unit of mm instead of tenths of mm for better interpretability. The most commonly observed value for snowfall is 0 mm. It makes sense because for most of the time there is no snow. 
+
+```{r}
+ny_noaa_clean = ny_noaa %>%
+  separate(date, into = c("year","month","day"),sep = "-") %>%
+  mutate(
+    prcp = prcp / 10,
+    tmax = as.numeric(tmax) / 10,
+    tmin = as.numeric(tmin) / 10,
+    month=month.abb[as.numeric(month)]
+  ) 
+
+
+ny_noaa_clean %>%
+  filter(month=="Jan") %>%
+  ggplot(aes(x=year,y=mean(tmax)))+geom_line(aes(color=id))
+
+
+
+```
+
+```{r}
+ny_noaa_clean %>%
+  ggplot(aes(x=tmin,y=tmax))+geom_hex()+labs(title = "Figure 3.3: tmax vs. tmin")
+
+ny_noaa_clean %>%
+  filter(0<snow & snow<100) %>%
+  ggplot(aes(x=day,y=snow))+geom_line(aes(color=year))
+
+```
+
+
 
