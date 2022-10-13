@@ -328,9 +328,9 @@ ny_noaa %>%
   janitor::clean_names() %>%
   separate(date, into = c("year","month","day"),sep = "-") %>%
   mutate(
-    prcp = prcp * 10,
-    tmax = as.numeric(tmax) * 10,
-    tmin = as.numeric(tmin) * 10
+    prcp = prcp / 10,
+    tmax = as.numeric(tmax) / 10,
+    tmin = as.numeric(tmin) / 10
   ) %>% 
   group_by(snow) %>%
   summarize(
@@ -372,15 +372,23 @@ ny_noaa_clean = ny_noaa %>%
 
 
 ny_noaa_clean %>%
-  filter(month=="Jan") %>%
-  ggplot(aes(x=year,y=mean(tmax)))+geom_line(aes(color=id))
+  filter(month=="Jan"|month=="Jul") %>%
+  group_by(year,id,month) %>%
+  summarize( 
+    mean_tmax = mean(tmax)
+  ) %>%
+  ggplot(aes(x=year,y=mean_tmax))+geom_line()+facet_grid(. ~ month)
 ```
 
-    ## Warning: Removed 217093 row(s) containing missing values (geom_path).
+    ## `summarise()` has grouped output by 'year', 'id'. You can override using the
+    ## `.groups` argument.
+
+    ## Warning: Removed 701 row(s) containing missing values (geom_path).
 
 ![](HW3_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ``` r
+par(mfrow = c(2, 1))
 ny_noaa_clean %>%
   ggplot(aes(x=tmin,y=tmax))+geom_hex()+labs(title = "Figure 3.3: tmax vs. tmin")
 ```
@@ -392,7 +400,8 @@ ny_noaa_clean %>%
 ``` r
 ny_noaa_clean %>%
   filter(0<snow & snow<100) %>%
-  ggplot(aes(x=day,y=snow))+geom_line(aes(color=year))
+  group_by(year) %>%
+  ggplot(aes(x=year,y=snow))+geom_boxplot()+theme(axis.text.x = element_text(angle = 45))
 ```
 
 ![](HW3_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
