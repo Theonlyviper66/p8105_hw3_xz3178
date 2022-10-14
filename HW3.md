@@ -18,6 +18,28 @@ library(tidyverse)
 
 ``` r
 library(ggridges)
+library(patchwork)
+
+knitr::opts_chunk$set(
+    echo = TRUE,
+    warning = FALSE,
+    fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+``` r
 library(p8105.datasets)
 data("instacart")
 ```
@@ -28,7 +50,7 @@ examples of the variables include add_to_cart_order which is the order
 in which each product is added to the cart, order sequence number for
 the user, order_dow which is the day of the week on which the order was
 placed, the name of the product, aisle identified, etc. The head of the
-dataset is shown below:
+data set is shown below:
 
 ``` r
 head(instacart,n=4L)
@@ -78,86 +100,62 @@ vegetables (#83) aisle.
 
 ``` r
 instacart %>% 
-  group_by(aisle_id,aisle) %>%
-  summarize(
-    n_aisle = n(),
-  ) %>% 
-  filter(n_aisle>10000) %>%
-  arrange(desc(n_aisle)) %>%
-  mutate(
-    aisle = as.factor(aisle)
-  ) %>%
-  ggplot(aes(x=n_aisle))+geom_bar()
+  count(aisle) %>% 
+  filter(n > 10000) %>% 
+  mutate(aisle = fct_reorder(aisle, n)) %>% 
+  ggplot(aes(x = aisle, y = n)) + 
+  geom_point() + 
+  labs(title = "Number of items ordered in each aisle") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
-    ## `summarise()` has grouped output by 'aisle_id'. You can override using the
-    ## `.groups` argument.
+<img src="HW3_files/figure-gfm/unnamed-chunk-5-1.png" width="90%" />
 
-![](HW3_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+The following table shows the three most popular items in the aisles
+“baking ingredients”, “dog food care”, and “packaged vegetables”:
 
 ``` r
-instacart %>%
-  filter(aisle ==c("baking ingredients","dog food care" , "packaged vegetables fruits")) %>%
-  group_by(aisle,product_name) %>%
-  summarise(
-    n_product = n()
-  ) %>%
-  arrange(desc(n_product)) %>%
-  mutate(rank=rank(desc(n_product))) %>%
-  filter(rank==c(1,2,3)) %>%
-pivot_wider(
-    names_from = aisle,
-    values_from = product_name
-  ) %>%
+instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>%
+  group_by(aisle) %>% 
+  count(product_name) %>% 
+  mutate(rank = min_rank(desc(n))) %>% 
+  filter(rank < 4) %>% 
+  arrange(desc(n)) %>%
   knitr::kable()
 ```
 
-    ## `summarise()` has grouped output by 'aisle'. You can override using the
-    ## `.groups` argument.
+| aisle                      | product_name                                  |    n | rank |
+|:---------------------------|:----------------------------------------------|-----:|-----:|
+| packaged vegetables fruits | Organic Baby Spinach                          | 9784 |    1 |
+| packaged vegetables fruits | Organic Raspberries                           | 5546 |    2 |
+| packaged vegetables fruits | Organic Blueberries                           | 4966 |    3 |
+| baking ingredients         | Light Brown Sugar                             |  499 |    1 |
+| baking ingredients         | Pure Baking Soda                              |  387 |    2 |
+| baking ingredients         | Cane Sugar                                    |  336 |    3 |
+| dog food care              | Snack Sticks Chicken & Rice Recipe Dog Treats |   30 |    1 |
+| dog food care              | Organix Chicken & Brown Rice Recipe           |   28 |    2 |
+| dog food care              | Small Dog Biscuits                            |   26 |    3 |
 
-    ## Warning in rank == c(1, 2, 3): longer object length is not a multiple of shorter
-    ## object length
-
-    ## Warning in rank == c(1, 2, 3): longer object length is not a multiple of shorter
-    ## object length
-
-| n_product | rank | packaged vegetables fruits | baking ingredients      | dog food care                                   |
-|----------:|-----:|:---------------------------|:------------------------|:------------------------------------------------|
-|      3324 |    1 | Organic Baby Spinach       | NA                      | NA                                              |
-|      1920 |    2 | Organic Raspberries        | NA                      | NA                                              |
-|      1692 |    3 | Organic Blueberries        | NA                      | NA                                              |
-|       157 |    1 | NA                         | Light Brown Sugar       | NA                                              |
-|       140 |    2 | NA                         | Pure Baking Soda        | NA                                              |
-|       122 |    3 | NA                         | Organic Vanilla Extract | NA                                              |
-|        14 |    1 | NA                         | NA                      | Organix Grain Free Chicken & Vegetable Dog Food |
-|        13 |    2 | NA                         | NA                      | Organix Chicken & Brown Rice Recipe             |
-|         9 |    3 | NA                         | NA                      | Original Dry Dog                                |
+The following tables shows the mean hour of the day at which Pink Lady
+Apples and Coffee Ice Cream are ordered on each day of the week:
 
 ``` r
 instacart %>%
-  select(c("order_dow","order_hour_of_day","product_name")) %>%
-  filter(product_name==c("Pink Lady Apples","Coffee Ice Cream")) %>%
-  group_by(order_dow) 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by(product_name, order_dow) %>%
+  summarize(mean_hour = mean(order_hour_of_day)) %>%
+  spread(key = order_dow, value = mean_hour) %>%
+  knitr::kable(digits = 2)
 ```
 
-    ## Warning in product_name == c("Pink Lady Apples", "Coffee Ice Cream"): longer
-    ## object length is not a multiple of shorter object length
+    ## `summarise()` has grouped output by 'product_name'. You can override using the
+    ## `.groups` argument.
 
-    ## # A tibble: 215 × 3
-    ## # Groups:   order_dow [7]
-    ##    order_dow order_hour_of_day product_name    
-    ##        <int>             <int> <chr>           
-    ##  1         2                17 Coffee Ice Cream
-    ##  2         6                 9 Coffee Ice Cream
-    ##  3         2                 9 Pink Lady Apples
-    ##  4         2                10 Pink Lady Apples
-    ##  5         1                 9 Pink Lady Apples
-    ##  6         1                 9 Pink Lady Apples
-    ##  7         5                17 Pink Lady Apples
-    ##  8         5                16 Pink Lady Apples
-    ##  9         3                15 Coffee Ice Cream
-    ## 10         5                 1 Coffee Ice Cream
-    ## # … with 205 more rows
+| product_name     |     0 |     1 |     2 |     3 |     4 |     5 |     6 |
+|:-----------------|------:|------:|------:|------:|------:|------:|------:|
+| Coffee Ice Cream | 13.77 | 14.32 | 15.38 | 15.32 | 15.22 | 12.26 | 13.83 |
+| Pink Lady Apples | 13.44 | 11.36 | 11.70 | 14.25 | 11.55 | 12.78 | 11.94 |
 
 ## Question 2
 
@@ -185,6 +183,9 @@ data set contains 35 rows and 1444 columns. It includes variable such as
 the week number, which day of the week it is, and the activity counts
 for each minute of a 24-hour day starting at midnight.
 
+The following table shows the total activities for each day, as
+specified by which week it was in and which day of the week it was:
+
 ``` r
 accel %>%
   pivot_longer(
@@ -192,65 +193,37 @@ accel %>%
     names_to = "activity",
     values_to = "activity_count"
   ) %>% 
-  group_by(day_id) %>%
-  summarize(day_sum = sum(activity_count)) %>%
+  group_by(week,day) %>%
+  summarize(day_sum = sum(activity_count)) %>% 
+  pivot_wider(
+    names_from = "day",
+    values_from = "day_sum"
+  ) %>% 
+  select(Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday) %>%
   knitr::kable()
 ```
 
-| day_id |   day_sum |
-|-------:|----------:|
-|      1 | 480542.62 |
-|      2 |  78828.07 |
-|      3 | 376254.00 |
-|      4 | 631105.00 |
-|      5 | 355923.64 |
-|      6 | 307094.24 |
-|      7 | 340115.01 |
-|      8 | 568839.00 |
-|      9 | 295431.00 |
-|     10 | 607175.00 |
-|     11 | 422018.00 |
-|     12 | 474048.00 |
-|     13 | 423245.00 |
-|     14 | 440962.00 |
-|     15 | 467420.00 |
-|     16 | 685910.00 |
-|     17 | 382928.00 |
-|     18 | 467052.00 |
-|     19 | 371230.00 |
-|     20 | 381507.00 |
-|     21 | 468869.00 |
-|     22 | 154049.00 |
-|     23 | 409450.00 |
-|     24 |   1440.00 |
-|     25 | 260617.00 |
-|     26 | 340291.00 |
-|     27 | 319568.00 |
-|     28 | 434460.00 |
-|     29 | 620860.00 |
-|     30 | 389080.00 |
-|     31 |   1440.00 |
-|     32 | 138421.00 |
-|     33 | 549658.00 |
-|     34 | 367824.00 |
-|     35 | 445366.00 |
-
-``` r
-accel %>%
-  pivot_longer(
-    activity_1:activity_1440,
-    names_to = "activity",
-    values_to = "activity_count"
-  ) %>% 
-  group_by(day_id,weekday_weekend) %>%
-  summarize(day_sum = sum(activity_count)) %>%
-  ggplot(aes(x=weekday_weekend,y=day_sum))+geom_boxplot()+labs(title = "Figure 2.1: Total activities by weekday or weekend")
-```
-
-    ## `summarise()` has grouped output by 'day_id'. You can override using the
+    ## `summarise()` has grouped output by 'week'. You can override using the
     ## `.groups` argument.
+    ## Adding missing grouping variables: `week`
 
-![](HW3_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+| week |    Monday |  Tuesday | Wednesday | Thursday |   Friday | Saturday | Sunday |
+|-----:|----------:|---------:|----------:|---------:|---------:|---------:|-------:|
+|    1 |  78828.07 | 307094.2 |    340115 | 355923.6 | 480542.6 |   376254 | 631105 |
+|    2 | 295431.00 | 423245.0 |    440962 | 474048.0 | 568839.0 |   607175 | 422018 |
+|    3 | 685910.00 | 381507.0 |    468869 | 371230.0 | 467420.0 |   382928 | 467052 |
+|    4 | 409450.00 | 319568.0 |    434460 | 340291.0 | 154049.0 |     1440 | 260617 |
+|    5 | 389080.00 | 367824.0 |    445366 | 549658.0 | 620860.0 |     1440 | 138421 |
+
+As shown in the above table, there had not been a consistent trend over
+the 5 weeks. Nevertheless, there were certain trend within each week.
+For week 1 and 2, the total activities of each day gradually increased
+until it peaked on either Sunday or Saturday. For week 3, the total
+activities of each day started with the highest on Monday, and
+fluctuated over the remaining of the week. For week 4 and 5, the total
+activities on both Saturdays were extremely low, and the overall
+activities of weekend was also much lower compared to that of the
+weekdays.
 
 ``` r
 accel %>%
@@ -264,42 +237,13 @@ accel %>%
   ) %>% 
   group_by(day_id,day) %>%
   summarize(day_sum = sum(activity_count)) %>%
-  ggplot(aes(x=day,y=day_sum))+geom_boxplot()+labs(title="Figure 2.2: Total activities by day of a week")
+  ggplot(aes(x=day_id,y=day_sum))+geom_line(aes(color=day))+labs(title="Figure 2.1: Total activities by days")
 ```
 
     ## `summarise()` has grouped output by 'day_id'. You can override using the
     ## `.groups` argument.
 
-![](HW3_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
-
-As shown in figure 2.1, the total activities of weekday is quite similar
-to that of weekend. In figure 2.2, we could see that the total
-activities for Friday is highest. The total activities for Sunday and
-Wednesday are higher than the rest, and the activities of Monday,
-Tuesday, Thursday, and Saturday are close to each other. There is also a
-much greater variation in the total activities on Saturday and Sunday
-compared to other days. In contrast, the total activities on Wednesday
-has much less variation.
-
-``` r
-accel %>%
-  mutate(
-    day=factor(day,levels = c("Monday", "Tuesday", "Wednesday","Thursday","Friday","Saturday","Sunday"))
-    )%>%
-  pivot_longer(
-    activity_1:activity_1440,
-    names_to = "activity",
-    values_to = "activity_count"
-  ) %>% 
-  group_by(day_id,day) %>%
-  summarize(day_sum = sum(activity_count)) %>%
-  ggplot(aes(x=day_id,y=day_sum))+geom_line(aes(color=day))+labs(title="Figure 2.3: Total activities by days")
-```
-
-    ## `summarise()` has grouped output by 'day_id'. You can override using the
-    ## `.groups` argument.
-
-![](HW3_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+<img src="HW3_files/figure-gfm/unnamed-chunk-10-1.png" width="90%" />
 
 For most days of a week except for Sunday, the total activities were
 increasing before day 10. For Monday, Saturday, and Sunday, the total
@@ -330,7 +274,8 @@ ny_noaa %>%
   mutate(
     prcp = prcp / 10,
     tmax = as.numeric(tmax) / 10,
-    tmin = as.numeric(tmin) / 10
+    tmin = as.numeric(tmin) / 10,
+    snow = snow / 10
   ) %>% 
   group_by(snow) %>%
   summarize(
@@ -341,24 +286,25 @@ ny_noaa %>%
 
     ## # A tibble: 282 × 2
     ##     snow  n_snow
-    ##    <int>   <int>
-    ##  1     0 2008508
-    ##  2    NA  381221
-    ##  3    25   31022
-    ##  4    13   23095
-    ##  5    51   18274
-    ##  6    76   10173
-    ##  7     8    9962
-    ##  8     5    9748
-    ##  9    38    9197
-    ## 10     3    8790
+    ##    <dbl>   <int>
+    ##  1   0   2008508
+    ##  2  NA    381221
+    ##  3   2.5   31022
+    ##  4   1.3   23095
+    ##  5   5.1   18274
+    ##  6   7.6   10173
+    ##  7   0.8    9962
+    ##  8   0.5    9748
+    ##  9   3.8    9197
+    ## 10   0.3    8790
     ## # … with 272 more rows
 
 The maximum and minimum temperature were divided by 10 to give a unit of
 degree Celsius. Precipitation values were also divided by 10 to give a
-unit of mm instead of tenths of mm for better interpretability. The most
-commonly observed value for snowfall is 0 mm. It makes sense because for
-most of the time there is no snow.
+unit of mm instead of tenths of mm for better interpretability. Snowfall
+was also divided by 10 to give a unit of cm. The most commonly observed
+value for snowfall is 0 cm. It makes sense because for most of the time
+there is no snow.
 
 ``` r
 ny_noaa_clean = ny_noaa %>%
@@ -367,41 +313,53 @@ ny_noaa_clean = ny_noaa %>%
     prcp = prcp / 10,
     tmax = as.numeric(tmax) / 10,
     tmin = as.numeric(tmin) / 10,
+    snow = snow / 10,
     month=month.abb[as.numeric(month)]
   ) 
 
 
 ny_noaa_clean %>%
+  mutate(
+    year = as.numeric(year)
+  ) %>%
   filter(month=="Jan"|month=="Jul") %>%
   group_by(year,id,month) %>%
   summarize( 
     mean_tmax = mean(tmax)
   ) %>%
-  ggplot(aes(x=year,y=mean_tmax))+geom_line()+facet_grid(. ~ month)
+  ggplot(aes(x=year,y=mean_tmax,group=id))+geom_line()+labs(title = "Figure 3.1: Mean tmax in January and July \n for each station across years ",x="year", y ="mean tmax (degrees C)")+facet_grid(. ~ month)
 ```
 
     ## `summarise()` has grouped output by 'year', 'id'. You can override using the
     ## `.groups` argument.
 
-    ## Warning: Removed 701 row(s) containing missing values (geom_path).
+<img src="HW3_files/figure-gfm/unnamed-chunk-13-1.png" width="90%" />
 
-![](HW3_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-
-``` r
-par(mfrow = c(2, 1))
-ny_noaa_clean %>%
-  ggplot(aes(x=tmin,y=tmax))+geom_hex()+labs(title = "Figure 3.3: tmax vs. tmin")
-```
-
-    ## Warning: Removed 1136276 rows containing non-finite values (stat_binhex).
-
-![](HW3_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+Figure 3.1 showed the average max temperature in January and July for
+each station across years, where each line represented a distinct subway
+station. The temperature fluctuated across years, and the overall
+temperature for a particular month (either January or July) was
+contained within a certain range. There was no obvious outliers as shown
+in the figure.
 
 ``` r
-ny_noaa_clean %>%
+library(patchwork)
+library(hexbin)
+q3_fig_i = 
+  ny_noaa_clean %>%
+  ggplot(aes(x=tmin,y=tmax))+geom_hex()+labs(title = "Figure 3.2: tmax vs. tmin",x="tmin (degrees C)", y ="tmax (degrees C)")
+
+q3_fig_ii = 
+  ny_noaa_clean %>%
   filter(0<snow & snow<100) %>%
   group_by(year) %>%
-  ggplot(aes(x=year,y=snow))+geom_boxplot()+theme(axis.text.x = element_text(angle = 45))
+  ggplot(aes(x=year,y=snow))+geom_boxplot()+labs(title = "Figure 3.3: Snowfall by year",x="year", y ="snowfall (cm)")+coord_flip()
+
+q3_fig_i + q3_fig_ii
 ```
 
-![](HW3_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
+<img src="HW3_files/figure-gfm/unnamed-chunk-14-1.png" width="90%" />
+
+Figure 3.2 showed a hex plot of the maximum temperature versus minimum
+temperature of each observation. Figure 3.3 showed the distribution of
+snowfall values greater than 0 and less than 10 cm of each year.
